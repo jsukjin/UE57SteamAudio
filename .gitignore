@@ -1,0 +1,105 @@
+# ============================================================
+# Unreal Engine — .gitignore
+# ============================================================
+
+# ---- 빌드 산출물 ----
+Binaries/
+Build/
+Intermediate/
+Saved/
+DerivedDataCache/
+
+# ---- 플러그인 빌드 산출물 ----
+Plugins/**/Binaries/
+Plugins/**/Intermediate/
+
+# ---- 패키징 결과물 ----
+Packaged/
+Package/
+Dist/
+Release/
+Shipping/
+*.pak
+*.ucas
+*.utoc
+
+# ---- 에디터 자동 생성 ----
+*.sln
+*.suo
+*.user
+*.opensdf
+*.sdf
+*.VC.db
+*.VC.opendb
+*.opendb
+
+# ---- Visual Studio ----
+.vs/
+*.vcxproj
+*.vcxproj.filters
+*.vcxproj.user
+*.props
+*.targets
+*.csproj
+
+# ---- Rider ----
+.idea/
+*.DotSettings.user
+
+# ---- 로그 ----
+*.log
+*.dmp
+
+# ---- 크래시 덤프 ----
+CrashReportClient/
+*.minidump
+
+# ---- 임시 파일 ----
+*.tmp
+*.temp
+*~
+
+# ---- OS 메타데이터 ----
+Thumbs.db
+Desktop.ini
+.DS_Store
+ehthumbs.db
+
+# ---- 웹캐시 (에디터 내장 브라우저) ----
+Saved/webcache*/
+
+# ---- 분석/프로파일링 ----
+*.utrace
+*.uprof
+
+# ============================================================
+# 추적 대상 유지 (위 규칙에서 제외)
+# ============================================================
+
+# uproject, uplugin 은 반드시 추적
+!*.uproject
+!*.uplugin
+
+# Config 는 추적 (DefaultEngine.ini 등 프로젝트 설정)
+!Config/
+!Config/**
+
+# 소스 코드
+!Source/
+!Source/**
+!Plugins/**/Source/
+!Plugins/**/Source/**
+
+# SDK lib/include (phonon.dll, phonon.h 등)
+!Plugins/**/lib/
+!Plugins/**/lib/**
+!Plugins/**/include/
+!Plugins/**/include/**
+
+# Resources (아이콘 등)
+!Plugins/**/Resources/
+!Plugins/**/Resources/**
+
+# Content 는 추적 (바이너리 에셋 포함)
+!Content/
+!Content/**

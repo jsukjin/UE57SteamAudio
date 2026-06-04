@@ -1,4 +1,3 @@
-//
 // Copyright 2017-2023 Valve Corporation.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -145,6 +144,11 @@ void FSteamAudioReverbPlugin::Initialize(const FAudioPluginInitializationParams 
 
 void FSteamAudioReverbPlugin::LazyInitMixer()
 {
+    // Manager가 아직 초기화되지 않았으면 스킵 — bSettingsLoaded가 false인 상태에서
+    // GetRealTimeSettings()의 check(bSettingsLoaded)가 터지는 것을 방지
+    if (!FSteamAudioModule::GetManager().IsInitialized())
+        return;
+
     IPLContext Context = FSteamAudioModule::GetManager().GetContext();
     IPLSimulationSettings SimulationSettings = FSteamAudioModule::GetManager().GetRealTimeSettings(static_cast<IPLSimulationFlags>(IPL_SIMULATIONFLAGS_REFLECTIONS | IPL_SIMULATIONFLAGS_PATHING));
 
@@ -404,6 +408,10 @@ void FSteamAudioReverbPlugin::ProcessSourceAudio(const FAudioPluginSourceInputDa
     if (!FSteamAudioModule::IsPlaying())
         return;
 
+    // Manager가 아직 초기화되지 않았으면 스킵
+    if (!FSteamAudioModule::GetManager().IsInitialized())
+        return;
+
     float* InBufferData = InputData.AudioBuffer->GetData();
     float* OutBufferData = OutputData.AudioBuffer.GetData();
 
@@ -441,8 +449,6 @@ void FSteamAudioReverbPlugin::ProcessSourceAudio(const FAudioPluginSourceInputDa
 
             iplReflectionEffectApply(Source.ReflectionEffect, &ReflectionParams, &Source.MonoBuffer, &Source.IndirectBuffer, ReflectionMixer);
 
-            // If we're not outputting to the mixer (i.e., the submix plugin), then spatialize the reflections here.
-            // NOTE: This does not currently work given the signal flow in the audio engine plugins.
             bool bOutputToMixer = (SimulationSettings.reflectionType == IPL_REFLECTIONEFFECTTYPE_CONVOLUTION ||
                 SimulationSettings.reflectionType == IPL_REFLECTIONEFFECTTYPE_TAN);
 
@@ -528,7 +534,6 @@ FSteamAudioReverbSubmixPlugin::~FSteamAudioReverbSubmixPlugin()
 
 uint32 FSteamAudioReverbSubmixPlugin::GetDesiredInputChannelCountOverride() const
 {
-	// Always use stereo input/output buffers.
 	return 2;
 }
 
@@ -539,6 +544,11 @@ void FSteamAudioReverbSubmixPlugin::SetReverbPlugin(SteamAudio::FSteamAudioRever
 
 void FSteamAudioReverbSubmixPlugin::LazyInit()
 {
+    // Manager가 아직 초기화되지 않았으면 스킵 — bSettingsLoaded가 false인 상태에서
+    // GetRealTimeSettings()의 check(bSettingsLoaded)가 터지는 것을 방지
+    if (!SteamAudio::FSteamAudioModule::GetManager().IsInitialized())
+        return;
+
     if (!Context)
     {
         Context = iplContextRetain(SteamAudio::FSteamAudioModule::GetManager().GetContext());
@@ -738,8 +748,6 @@ void FSteamAudioReverbSubmixPlugin::ClearBuffers()
 
 void FSteamAudioReverbSubmixPlugin::OnProcessAudio(const FSoundEffectSubmixInputData& InData, FSoundEffectSubmixOutputData& OutData)
 {
-	// The submix plugin can keep running in the editor when not in play mode. So don't do anything if Steam Audio
-	// is not initialized.
     if (!SteamAudio::FSteamAudioModule::IsPlaying())
     {
         if (ReflectionEffect)
@@ -754,6 +762,11 @@ void FSteamAudioReverbSubmixPlugin::OnProcessAudio(const FSoundEffectSubmixInput
 
         return;
     }
+
+    // Manager가 아직 초기화되지 않았으면 스킵
+    // IsPlaying() 이후, GetRealTimeSettings() 이전에 체크해야 check(bSettingsLoaded) 크래시를 막을 수 있음
+    if (!SteamAudio::FSteamAudioModule::GetManager().IsInitialized())
+        return;
 
 	float* InBufferData = InData.AudioBuffer->GetData();
 	float* OutBufferData = OutData.AudioBuffer->GetData();
@@ -770,7 +783,6 @@ void FSteamAudioReverbSubmixPlugin::OnProcessAudio(const FSoundEffectSubmixInput
 
         bool bHasOutput = false;
 
-		// Grab source-centric reflections from the mixer.
 		if (SimulationSettings.reflectionType == IPL_REFLECTIONEFFECTTYPE_CONVOLUTION || SimulationSettings.reflectionType == IPL_REFLECTIONEFFECTTYPE_TAN)
 		{
             IPLReflectionMixer Mixer = ReverbPlugin->GetReflectionMixer();
@@ -787,11 +799,9 @@ void FSteamAudioReverbSubmixPlugin::OnProcessAudio(const FSoundEffectSubmixInput
             }
 		}
 
-		// If requested, apply reverb to the input.
 		USteamAudioReverbSubmixPluginPreset* ReverbPreset = Cast<USteamAudioReverbSubmixPluginPreset>(GetPreset());
 		if (ReverbPreset && ReverbPreset->Settings.bApplyReverb)
 		{
-            // If a Steam Audio Listener component has not set the current reverb source, stop.
             IPLSource CurrentReverbSource = GetReverbSource();
 			if (CurrentReverbSource && ReflectionEffect &&
                 InBuffer.data && MonoBuffer.data && ReverbBuffer.data && IndirectBuffer.data)
@@ -810,15 +820,11 @@ void FSteamAudioReverbSubmixPlugin::OnProcessAudio(const FSoundEffectSubmixInput
 
 				if (SimulationSettings.reflectionType == IPL_REFLECTIONEFFECTTYPE_CONVOLUTION || SimulationSettings.reflectionType == IPL_REFLECTIONEFFECTTYPE_TAN)
 				{
-					// We might have mixed source-centric reflections, so render listener-centric reverb into a temp
-					// buffer and mix it into the source-centric reflections.
 					iplReflectionEffectApply(ReflectionEffect, &ReverbParams, &MonoBuffer, &ReverbBuffer, nullptr);
 					iplAudioBufferMix(Context, &ReverbBuffer, &IndirectBuffer);
 				}
 				else
 				{
-					// We don't have source-centric reflections, so just render the listener-centric reverb into the buffer
-					// that we'll spatialize in the next step.
 					iplReflectionEffectApply(ReflectionEffect, &ReverbParams, &MonoBuffer, &IndirectBuffer, nullptr);
 				}
 
