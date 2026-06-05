@@ -55,7 +55,7 @@ void FSteamAudioBakedSourceDetails::CustomizeDetails(IDetailLayoutBuilder& Detai
         }
     }
 
-	DetailLayout.EditCategory("BakedSourceSettings").AddProperty(GET_MEMBER_NAME_CHECKED(USteamAudioBakedSourceComponent, InfluenceRadius));
+DetailLayout.EditCategory("BakedSourceSettings").AddProperty(GET_MEMBER_NAME_CHECKED(USteamAudioBakedSourceComponent, InfluenceRadius));
     DetailLayout.EditCategory("BakedSourceSettings").AddCustomRow(NSLOCTEXT("SteamAudio", "BakeReflections", "Bake Reflections"))
         .NameContent()
         [
